@@ -156,4 +156,27 @@ class OfficesControllerTest extends TestCase
         $this->assertEquals('Parakou Office',$response->json('data')[0]['title']);
         $this->assertEquals('Cotonou Office',$response->json('data')[1]['title']);
     }
+
+    /**
+     * @test
+    */
+    public function isShowTheOffice()
+    {
+        $tag = Tag::factory()->create();
+        $user = User::factory()->create();
+        $office = Office::factory()->for($user)->create();
+
+        $office->tags()->attach($tag);
+        $office->images()->create(['path'=>'image.jpg']);
+
+        Reservation::factory()->for($office)->create(['status' => Reservation::STATUS_ACTIVE]);
+        Reservation::factory()->for($office)->create(['status' => Reservation::STATUS_CANCELLED]);
+
+        $response = $this->get('/api/offices/'.$office->id);
+
+        $this->assertEquals($response->json('data')['reservations_count'],1);
+        $this->assertIsArray($response->json('data')['tags']);
+        $this->assertIsArray($response->json('data')['images']);
+        $this->assertEquals($response->json('data')['user']['id'],$user->id);
+    }
 }
