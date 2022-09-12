@@ -13,7 +13,9 @@ use Tests\TestCase;
 
 class OfficesControllerTest extends TestCase
 {
+
     use RefreshDatabase;
+
     /**
      * @test
      */
@@ -127,7 +129,7 @@ class OfficesControllerTest extends TestCase
      */
     public function itOrdersByDistanceWhenCoordinatesAreProvided ()
     {
-
+        $this->withoutExceptionHandling();
         /*
          * Cotonou
          * lat = 7.934327726169804
