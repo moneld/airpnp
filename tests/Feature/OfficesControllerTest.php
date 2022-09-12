@@ -152,6 +152,8 @@ class OfficesControllerTest extends TestCase
         );
 
         $response = $this->get('/api/offices?lat=7.934327726169804&lng=1.975135952890811');
-        $response->dump();
+        $response->assertOk();
+        $this->assertEquals('Parakou Office',$response->json('data')[0]['title']);
+        $this->assertEquals('Cotonou Office',$response->json('data')[1]['title']);
     }
 }
