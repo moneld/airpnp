@@ -25,8 +25,10 @@ class OfficeController extends Controller
     public function index() : \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $offices = Office::query()
-            ->where('approval_status',Office::APPROVAL_APPROVED)
-            ->where('hidden',false)
+            ->when(request('user_id') && auth()->user() && request('user_id') == auth()->id(),
+            fn($builder) => $builder,
+            fn($builder) => $builder->where('approval_status',Office::APPROVAL_APPROVED)->where('hidden',false)
+            )
             ->when(request('user_id'), fn($builder) => $builder->whereUserId(request('user_id')))
             ->when(request('visitor_id'), fn($builder) => $builder->whereRelation('reservations', 'user_id','=',request('visitor_id')))
             ->when(
@@ -76,7 +78,7 @@ class OfficeController extends Controller
          return $office;
          });
 
-        Notification::send(User::firstWhere('name','monel'), new OfficePendingApproval($office));
+        Notification::send(User::where('is_admin',true)->get(), new OfficePendingApproval($office));
 
         return OfficeResource::make(
             $office->load(['images','tags','user'])
@@ -108,7 +110,7 @@ class OfficeController extends Controller
         });
 
         if ($requiresReview){
-            Notification::send(User::firstWhere('name','monel'), new OfficePendingApproval($office));
+            Notification::send(User::where('is_admin',true)->get(), new OfficePendingApproval($office));
         }
 
         return OfficeResource::make(

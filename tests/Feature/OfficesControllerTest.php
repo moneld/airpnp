@@ -188,7 +188,7 @@ class OfficesControllerTest extends TestCase
      */
     public function itCreatesAnOffice()
     {
-        $admin = User::factory()->create(['name' => 'monel']);
+        $admin = User::factory()->create(['is_admin' => true]);
 
         Notification::fake();
 
@@ -262,6 +262,28 @@ class OfficesControllerTest extends TestCase
     /**
      * @test
      */
+    public function itUpdatesTheFeaturedImageOfAnOffice()
+    {
+        $user = User::factory()->createQuietly();
+        $office = Office::factory()->for($user)->create();
+
+        $image= $office->images()->create([
+            'path' => 'image.jpg'
+        ]);
+        $this->actingAs($user);
+
+        $response = $this->putJson('api/offices/'.$office->id,[
+            'featured_image_id' => $image->id,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.featured_image_id', $image->id);
+
+    }
+
+    /**
+     * @test
+     */
     public function itDoesntUpdateOfficeThatDoesntBelongoUser()
     {
         $user = User::factory()->create();
@@ -284,7 +306,7 @@ class OfficesControllerTest extends TestCase
      */
     public function itMarksTheOfficeAsPendingIfDirty()
     {
-        $admin = User::factory()->create(['name' => 'monel']);
+        $admin = User::factory()->create(['is_admin' => true]);
 
         Notification::fake();
 
@@ -342,7 +364,7 @@ class OfficesControllerTest extends TestCase
 
         $response->assertUnprocessable();
 
-
-
     }
+
+
 }
