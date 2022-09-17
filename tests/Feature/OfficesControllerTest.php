@@ -7,9 +7,11 @@ use App\Models\Office;
 use App\Models\Reservation;
 use App\Models\Tag;
 use App\Models\User;
+use App\Notifications\OfficePendingApproval;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class OfficesControllerTest extends TestCase
@@ -186,6 +188,10 @@ class OfficesControllerTest extends TestCase
      */
     public function itCreatesAnOffice()
     {
+        $admin = User::factory()->create(['name' => 'monel']);
+
+        Notification::fake();
+
         $user = User::factory()->createQuietly();
         $tag = Tag::factory()->create();
         $tag2 = Tag::factory()->create();
@@ -207,6 +213,9 @@ class OfficesControllerTest extends TestCase
              ->assertJsonPath('data.user.id',$user->id)
              ->assertJsonPath('data.approval_status',Office::APPROVAL_PENDING)
              ->assertJsonCount(2,'data.tags');
+
+        Notification::assertSentTo($admin,OfficePendingApproval::class);
+
     }
 
     /**
@@ -268,5 +277,72 @@ class OfficesControllerTest extends TestCase
 
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
+    }
+
+    /**
+     * @test
+     */
+    public function itMarksTheOfficeAsPendingIfDirty()
+    {
+        $admin = User::factory()->create(['name' => 'monel']);
+
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $office = Office::factory()->for($user)->create();
+
+
+        $this->actingAs($user);
+
+        $response = $this->putJson('api/offices/'.$office->id,[
+            'lat' => '9.329142401738274',
+        ]);
+
+
+        $response->assertOk();
+        $this->assertDatabaseHas('offices',[
+            'id' => $office->id,
+            'approval_status' => Office::APPROVAL_PENDING
+        ]);
+
+        Notification::assertSentTo($admin,OfficePendingApproval::class);
+    }
+
+    /**
+    * @test
+     */
+    public function itCanDeleteOffice()
+    {
+        $user = User::factory()->create();
+        $office = Office::factory()->for($user)->create();
+
+
+        $this->actingAs($user);
+
+        $response = $this->deleteJson('api/offices/'.$office->id);
+
+        $response->assertOk();
+
+
+    }
+
+    /**
+     * @test
+     */
+    public function itCannotDeleteAnOfficeThatHasReservations()
+    {
+        $user = User::factory()->create();
+        $office = Office::factory()->for($user)->create();
+
+        Reservation::factory(3)->for($office)->create();
+
+        $this->actingAs($user);
+
+        $response = $this->deleteJson('api/offices/'.$office->id);
+
+        $response->assertUnprocessable();
+
+
+
     }
 }
